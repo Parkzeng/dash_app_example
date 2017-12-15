@@ -13,13 +13,11 @@ server = app.server
 
 app.css.append_css({"external_url": "https://codepen.io/chriddyp/pen/bWLwgP.css"})
 
-available_indicators = df['UNIT'].unique()
+available_indicators = df['NA_ITEM'].unique()
 available_geo = df['GEO'].unique()
 
-# We create the first graph
-
 app.layout = html.Div([
-
+    # Graph 1
     html.Div([
         html.H1(children='Scatter Plot',style={'text-align':'center','font-family':'monospace'}),
         html.Div([
@@ -27,7 +25,7 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='xaxis-column',
                     options=[{'label': i, 'value': i} for i in available_indicators],
-                    value='Chain linked volumes, index 2010=100'
+                    value='Gross domestic product at market prices'
                 ),
             ],
             style={'width': '48%', 'display': 'inline-block'}),
@@ -36,27 +34,24 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='yaxis-column',
                     options=[{'label': i, 'value': i} for i in available_indicators],
-                    value='Current prices, million euro'
+                    value='Exports of goods and services'
                 ),
             ],style={'width': '48%', 'float': 'right', 'display': 'inline-block'})
         ]),
 
-        dcc.Graph(id='indicator-graphic'),
+        dcc.Graph(id='indicator-graphic',
+                 clickData={'points':[{'customdata':'Norway'}]}),
 
         dcc.Slider(
             id='year--slider',
             min=df['TIME'].min(),
             max=df['TIME'].max(),
-            value=2007,
+            value=2012,
             step=None,
             marks={str(year): str(year) for year in df['TIME'].unique()}
         )
     ]),
-
-
-    #We create the second graph
-
-
+    # Graph 2
     html.Div([
         html.H1(children='Line Chart',style={'margin-top':'5%','text-align':'center','font-family':'monospace'}),
         html.Div([
@@ -64,22 +59,15 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='indicator-select',
                     options=[{'label': i, 'value': i} for i in available_indicators],
-                    value='Current prices, million euro'
+                    value='Value added, gross'
                 ),
             ],
             style={'width': '48%', 'display': 'inline-block'}),
 
-            html.Div([
-                dcc.Dropdown(
-                    id='country-select',
-                    options=[{'label': i, 'value': i} for i in available_geo],
-                    value='Norway'
-                ),
-            ],style={'width': '48%', 'float': 'right', 'display': 'inline-block'})
         ]),
         dcc.Graph(id='indicator-graphic2'),
     ])
-    #END SECOND
+    #Graph 2 End
 ])
 
 @app.callback(
@@ -88,17 +76,18 @@ app.layout = html.Div([
      dash.dependencies.Input('yaxis-column', 'value'),
      dash.dependencies.Input('year--slider', 'value')])
 def update_graph(xaxis_column_name, yaxis_column_name, year_value):
-    dff = df[df['TIME'] == year_value]
+    dff = df[df['TIME'] == year_value][df['UNIT'] == "Current prices, million euro"]
 
     return {
         'data': [go.Scatter(
-            x=dff[dff['UNIT'] == xaxis_column_name]['Value'],
-            y=dff[dff['UNIT'] == yaxis_column_name]['Value'],
-            text=dff[dff['UNIT'] == yaxis_column_name]['GEO'],
+            x=dff[dff['NA_ITEM'] == xaxis_column_name]['Value'],
+            y=dff[dff['NA_ITEM'] == yaxis_column_name]['Value'],
+            text=dff[dff['NA_ITEM'] == yaxis_column_name]['GEO'],
             mode='markers',
+            customdata=dff[dff['NA_ITEM'] == yaxis_column_name]['GEO'],
             marker={
-                'size': 10,
-                'color':'rgb(22, 96, 167)',
+                'size': 14,
+                'color':'rgb(181, 118, 128)',
                 'opacity': 0.5,
                 'line': {'width': 0.5, 'color': 'white'}
             }
@@ -116,27 +105,28 @@ def update_graph(xaxis_column_name, yaxis_column_name, year_value):
             hovermode='closest'
         )
     }
-#CALLBACK SECOND GRAPH
+# Graph 2 Callback
 @app.callback(
     dash.dependencies.Output('indicator-graphic2', 'figure'),
     [dash.dependencies.Input('indicator-select', 'value'),
-     dash.dependencies.Input('country-select', 'value'),])
+     dash.dependencies.Input('indicator-graphic', 'clickData'),])
 def update_graph(indicator_name, country_name):
-    dff = df[df['GEO'] == country_name]
+    countryname = country_name['points'][0]['customdata']
+    dff = df[df['GEO'] == countryname][df['UNIT'] == "Current prices, million euro"]
 
     return {
         'data': [go.Scatter(
-            x=dff[dff['UNIT'] == indicator_name]['TIME'],
-            y=dff[dff['UNIT'] == indicator_name]['Value'],
-            text=dff[dff['UNIT'] == indicator_name]['Value'],
-            mode='lines',
+            x=dff[dff['NA_ITEM'] == indicator_name]['TIME'],
+            y=dff[dff['NA_ITEM'] == indicator_name]['Value'],
+            text=dff[dff['NA_ITEM'] == indicator_name]['Value'],
+            mode='line',
             line = dict(
-                color = ('rgb(22, 96, 167)'),
-                width = 4,)
+                color = ('rgb(181, 118, 128)'),
+                width = 6,)
         )],
         'layout': go.Layout(
             xaxis={
-                'title': country_name,
+                'title': countryname,
             },
             yaxis={
                 'title': indicator_name,
